@@ -11,6 +11,11 @@ description = "Command-line interface for the MinerU-Popo Rust engine."
 name = "popo"
 path = "src/main.rs"
 
+[features]
+default = []
+# Enables PDF page rendering for the VLM image inputs (requires libpdfium).
+pdfium = ["popo-pdf/pdfium"]
+
 [dependencies]
 popo-core = { workspace = true }
 popo-obs = { workspace = true }
@@ -20,6 +25,7 @@ popo-infer = { workspace = true }
 popo-tree = { workspace = true }
 popo-eval = { workspace = true }
 popo-enrich = { workspace = true }
+popo-pdf = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }

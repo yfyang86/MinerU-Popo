@@ -323,6 +323,31 @@ it needs both the model client (have it) and PDF-crop rendering (pending).
 
 ---
 
+## PDF stage (cross-cutting) ✅ core
+
+**Goal:** Render PDF pages for the VLM `<image>` inputs (unblocks several
+deferred items).
+
+### Delivered
+
+- **`popo-pdf`** crate — `stitch_pages_with_border` (port of
+  `concatenate_pdf_pages_with_border`, minus page-number text), `to_jpeg_base64`,
+  `crop_unit_bbox`, and `PdfPageImages` (implements `popo-infer`'s
+  `PageImageProvider`). All offline-tested (no native dependency).
+- A **pdfium-backed `PdfiumRenderer`** behind the optional `pdfium` feature
+  (needs `libpdfium` at runtime); compiles in CI but isn't exercised there.
+- **`popo infer --pdf-dir`** wiring: with `--features pdfium`, renders real page
+  images per document; without it, text-only (default build, CI-safe).
+- 4 popo-pdf tests; 112 workspace tests total.
+
+### Remaining (now unblocked)
+
+- Metadata generation (`generate_metadata.py`) via `crop_unit_bbox` + the model.
+- Semantic table cell-merge; Paddle per-page reader (both need page sizing).
+- Page-number text overlay in the stitched image (fidelity detail).
+
+---
+
 ## Working agreements
 
 - One subtask implementation, two backends — do not fork an `inference` vs

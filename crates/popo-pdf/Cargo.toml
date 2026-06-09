@@ -1,0 +1,20 @@
+[package]
+name = "popo-pdf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "PDF page rendering and image stitching for the VLM image inputs."
+
+[features]
+default = []
+# Enables the pdfium-backed renderer (requires a libpdfium shared library at runtime).
+pdfium = ["dep:pdfium-render"]
+
+[dependencies]
+popo-infer = { workspace = true }
+popo-core = { workspace = true }
+image = { workspace = true }
+base64 = { workspace = true }
+pdfium-render = { version = "0.8", optional = true }

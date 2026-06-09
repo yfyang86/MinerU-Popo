@@ -11,6 +11,7 @@ members = [
     "crates/popo-eval",
     "crates/popo-enrich",
     "crates/popo-data-engine",
+    "crates/popo-pdf",
     "crates/popo-cli",
 ]
 
@@ -33,6 +34,7 @@ popo-tree = { path = "crates/popo-tree" }
 popo-eval = { path = "crates/popo-eval" }
 popo-enrich = { path = "crates/popo-enrich" }
 popo-data-engine = { path = "crates/popo-data-engine" }
+popo-pdf = { path = "crates/popo-pdf" }
 
 # Async / runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
@@ -57,6 +59,7 @@ metrics-exporter-prometheus = { version = "0.16", default-features = false }
 # CLI / utils
 clap = { version = "4", features = ["derive", "env"] }
 base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
 regex = "1"
 scraper = "0.20"
 unicode-normalization = "0.1"

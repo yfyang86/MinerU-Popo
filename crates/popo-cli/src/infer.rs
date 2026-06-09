@@ -2,14 +2,16 @@
 //!
 //! Reads per-document normalized input (`{input_label, pages}` or a bare
 //! `pages` map), runs the subtasks through the model client, and writes the
-//! `doc_blocks` JSON the tree builder consumes. Page images are not yet wired
-//! (the PDF stage is pending), so prompts are text-only via `NoImages`.
+//! `doc_blocks` JSON the tree builder consumes. With `--features pdfium` and
+//! `--pdf-dir`, page images are rendered for the VLM; otherwise text-only.
 
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Args;
-use popo_infer::{build_doc_blocks, doc_blocks_to_json, run_inference, NoImages};
+use popo_infer::{
+    build_doc_blocks, doc_blocks_to_json, run_inference, NoImages, PageImageProvider,
+};
 use popo_model::{ClientOptions, LlmConfig, ModelClient, ReplayBackend};
 use serde_json::Value;
 use std::sync::Arc;
@@ -26,6 +28,10 @@ pub struct InferArgs {
     /// Provider name; falls back to `[default].provider`.
     #[arg(long, short)]
     pub provider: Option<String>,
+    /// Directory of source PDFs (`<doc>.pdf`) for rendering VLM page images.
+    /// Requires building with `--features pdfium`; otherwise text-only.
+    #[arg(long)]
+    pub pdf_dir: Option<PathBuf>,
     /// Limit the number of documents processed (`0` = all).
     #[arg(long, default_value_t = 0)]
     pub doc_limit: usize,
@@ -50,8 +56,11 @@ pub async fn run(cli_config: &std::path::Path, args: &InferArgs) -> Result<()> {
             load_normalized(path).with_context(|| format!("reading {}", path.display()))?;
         let mut blocks = build_doc_blocks(&pages);
 
+        let pdf_path = args.pdf_dir.as_ref().map(|d| d.join(format!("{stem}.pdf")));
+        let images = make_image_provider(pdf_path);
+
         tracing::info!(doc = %input_label, blocks = blocks.len(), "running inference");
-        run_inference(&client, &mut blocks, &NoImages)
+        run_inference(&client, &mut blocks, images.as_ref())
             .await
             .with_context(|| format!("inference failed for {input_label}"))?;
 
@@ -71,6 +80,34 @@ pub async fn run(cli_config: &std::path::Path, args: &InferArgs) -> Result<()> {
         args.output_dir.display()
     );
     Ok(())
+}
+
+/// Choose the page-image provider for a document. With the `pdfium` feature and
+/// an existing source PDF, renders real page images; otherwise text-only.
+#[cfg(feature = "pdfium")]
+fn make_image_provider(pdf: Option<PathBuf>) -> Box<dyn PageImageProvider> {
+    if let Some(path) = pdf {
+        if path.exists() {
+            match popo_pdf::pdfium::PdfiumRenderer::open(&path, 1000) {
+                Ok(renderer) => return Box::new(popo_pdf::PdfPageImages::new(renderer)),
+                Err(e) => {
+                    tracing::warn!(error = %e, path = %path.display(), "pdfium open failed; text-only")
+                }
+            }
+        }
+    }
+    Box::new(NoImages)
+}
+
+/// Text-only fallback when built without the `pdfium` feature.
+#[cfg(not(feature = "pdfium"))]
+fn make_image_provider(pdf: Option<PathBuf>) -> Box<dyn PageImageProvider> {
+    if pdf.as_ref().map(|p| p.exists()).unwrap_or(false) {
+        tracing::warn!(
+            "--pdf-dir set but binary built without --features pdfium; running text-only"
+        );
+    }
+    Box::new(NoImages)
 }
 
 /// Build the model client, honoring `POPO_MODEL_REPLAY` for hermetic runs.
