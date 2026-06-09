@@ -24,6 +24,7 @@ mod build_tree;
 mod eval;
 mod infer;
 mod normalize;
+mod run;
 mod split_subnode;
 
 /// MinerU-Popo Rust engine.
@@ -60,6 +61,8 @@ enum Command {
     Eval(eval::EvalArgs),
     /// Split long text / visual nodes into subnodes (final tree chunking).
     SplitSubnode(split_subnode::SplitSubnodeArgs),
+    /// End-to-end pipeline: normalize → infer → build-tree → split-subnode.
+    Run(run::RunArgs),
 }
 
 #[derive(Subcommand)]
@@ -162,6 +165,7 @@ async fn run(cli: &Cli) -> Result<()> {
         Command::BuildTree(args) => build_tree::run(args)?,
         Command::Eval(args) => eval::run(args)?,
         Command::SplitSubnode(args) => split_subnode::run(args)?,
+        Command::Run(args) => run::run(&cli.config, args).await?,
     }
     Ok(())
 }

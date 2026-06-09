@@ -56,102 +56,100 @@ It constructs document tree structures with a 4B post-processing model that perf
 
 ## ⚙️ Setup
 
-1. Prepare Environment
-```bash
-conda create -n popo python=3.10
-conda activate popo
-pip install -r requirements.txt
-```
-
-2. Download Model
-
-Download the MinerU-Popo post-processing model:
+MinerU-Popo is a **Rust-native** engine (the original Python implementation has
+been retired; it remains available in the git history for reference). You need a
+recent Rust toolchain:
 
 ```bash
-hf download DreamEternal/MinerU-Popo --local-dir models/Mineru-Popo
+rustup toolchain install stable   # rustc >= 1.82
+cargo build --release             # builds the `popo` binary
 ```
 
-- [MinerU-Popo](https://huggingface.co/DreamEternal/MinerU-Popo)
+### Model configuration
 
-1. Model Configuration
+Copy `popo.example.toml` to `popo.toml` and set your provider(s). The engine
+talks to any OpenAI-compatible endpoint (vLLM/SGLang/TGI serving Popo /
+Qwen3-VL) or the Anthropic Messages API:
 
-In the [Configuration](./post_processing/model_utils.py),
-for transformer inference, edit the environment `POPO_MODEL_PATH`. For vllm inference, edit the `url` and `key` in function `popo_generate`.
+```toml
+[default]
+provider = "local_vllm"
 
-For enrichment and question answering, further edit the `url` and `key` in `qwen_generate` and `gpt_generate`.
+[providers.local_vllm]
+type = "openai"
+api_base = "http://localhost:8000/v1"
+api_key = "dummy"
+model = "Popo"
+```
+
+API keys may be given literally or as `env:VAR` / `${VAR}` to read them from the
+environment. Point the CLI at a config with `--config` or `POPO_CONFIG`.
+
+### PDF page images (optional)
+
+The four subtasks are vision-language tasks. To feed the model rendered page
+images, build with the `pdfium` feature (requires a `libpdfium` shared library
+on your system) and pass `--pdf-dir`:
+
+```bash
+cargo build --release --features pdfium
+```
+
+Without it, the pipeline runs text-only.
 
 ## 💻 Usage
 
-The post-processing pipeline takes page-level parsing results from OCR/layout systems, normalizes them into a unified schema, runs MinerU-Popo inference, and finally builds document trees.
-
-### Step 1: Prepare OCR/Layout Outputs
-
-Run your preferred page-level parser first, such as MinerU, MonkeyOCR, Dolphin, PaddleOCR-VL, or GLM-OCR. Place each model's output under:
-
-```text
-post-process/<model_name>/
-```
-
-For example:
-
-```text
-post-process/mineru/
-post-process/monkeyocr/
-post-process/PaddleOCR-VL-1.5/
-post-process/dolphin/
-post-process/glm-ocr/
-```
-
-### Step 2: Normalize Labels
-
-Convert raw model-specific labels and bounding boxes into the unified MinerU-Popo input format:
+The `popo` binary exposes the pipeline as subcommands. Run the whole thing
+end to end:
 
 ```bash
-bash scripts/run_label_normalization.sh
+popo run \
+  --model mineru \
+  --input-dir post-process/mineru \
+  --work-dir outputs \
+  --provider local_vllm \
+  --pdf-dir eval_pdf_dir        # optional, needs --features pdfium
 ```
 
-The normalized outputs are written to:
+This produces, under `--work-dir`:
 
 ```text
-outputs/label_normalization/<model_name>/
+normalized/<model>/<doc>.json   # canonical blocks
+inference/<doc>.json            # doc_blocks (4 subtasks applied)
+tree/<doc>.json + tree_txt/     # document tree + text preview
+final/<doc>.json                # tree with subnode chunking (final result)
 ```
 
-### Step 3: Run MinerU-Popo Inference
-
-Run MinerU-Popo on the normalized labels:
+### Or run the stages individually
 
 ```bash
-bash scripts/run_inference.sh
+# 1. Normalize OCR/layout outputs (MinerU, MonkeyOCR, Dolphin, PaddleOCR-VL, GLM-OCR)
+popo normalize --model mineru --input-dir post-process/mineru --output-dir outputs/normalized
+
+# 2. Run the four post-processing subtasks
+popo infer --input-dir outputs/normalized/mineru --output-dir outputs/inference
+
+# 3. Build the document tree (+ cross-page table merge)
+popo build-tree --input-dir outputs/inference --output-dir outputs/tree --txt-dir outputs/tree_txt
+
+# 4. Split long/visual nodes into subnodes
+popo split-subnode --input-dir outputs/tree --output-dir outputs/final
 ```
 
-The inference outputs are written to:
-
-```text
-outputs/inference/<model_name>/
-```
-
-### Step 4: Build Document Trees
-
-Build structured document trees from the inference outputs:
+### Evaluation
 
 ```bash
-bash scripts/build_tree.sh
+popo eval --model mineru --input-dir post-process/mineru \
+  --gt-json eval_gt_dir/title.json --output-dir outputs/eval
 ```
 
-The final tree outputs and text previews are written to:
+### Other commands
 
-```text
-outputs/build_tree/<model_name>/
-outputs/build_tree_txt/<model_name>/
+```bash
+popo config check          # validate popo.toml
+popo model list            # list configured providers
+popo model chat "hello"    # one-shot chat against a provider
 ```
-
-Example tree outputs are provided in:
-
-```text
-output_cases/
-```
-
-
 
 ## 🙏 Acknowledgements
 - [MinerU](https://github.com/opendatalab/MinerU) and other OCR system (MonkeyOCR, Dolphin, PaddleOCR, GLM-OCR) for page-level parsing.

@@ -16,7 +16,8 @@
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | **6** | `popo-tree` (tree assembly) + cross-page table merge + `build-tree` CLI | Ph 5 | ✅ done* |
 | **7** | `popo-eval` (native TEDS) + `eval` CLI + `popo-enrich` (subnode split) | Ph 6 | ✅ done* |
-| **8** | `popo-data-engine` training cases (reuses `popo-infer`) — unification | Ph 7 | 🚧 in progress |
+| **8** | `popo-data-engine` training cases (reuses `popo-infer`) — unification | Ph 7 | ✅ done* |
+| **9** | `run` orchestrator + README cutover + **Python removed** | Ph 8 | ✅ done |
 | 9 | hardening, throughput SLO, cutover, **delete Python** | Ph 8 | planned |
 
 ---
@@ -345,6 +346,34 @@ deferred items).
 - Metadata generation (`generate_metadata.py`) via `crop_unit_bbox` + the model.
 - Semantic table cell-merge; Paddle per-page reader (both need page sizing).
 - Page-number text overlay in the stitched image (fidelity detail).
+
+---
+
+## Sprint 9 — Cutover ✅
+
+**Goal:** Make Rust the pipeline and retire Python.
+
+### Delivered
+
+- **`popo run`** — end-to-end orchestrator chaining
+  `normalize → infer → build-tree → split-subnode` under one work dir.
+- **README** rewritten for the Rust CLI (build, config, PDF feature, the `run`
+  command + per-stage usage, eval).
+- **Python tree deleted** from the working tree: `post_processing/`,
+  `data_engine/`, `eval/`, `scripts/`, `requirements.txt`.
+
+### Important caveats
+
+- **Recoverable:** the Python sources remain in git history; nothing is
+  destroyed. Not-yet-ported refinements can be re-derived from there.
+- **Parity is not formally proven.** No golden corpus (real OCR outputs +
+  recorded Python results) was available in this environment, so every port is
+  *faithful and unit-tested* but not byte-diffed against Python. Validate on
+  real documents before relying on exact-match output.
+- **Not yet ported** (available in history; have working approximations or are
+  optional): metadata generation (`generate_metadata.py`), the GPT-driven
+  data-engine `add_linkings_*` flow, the Magic-PDF semantic table cell-merge,
+  the Paddle per-page reader, and the stitched page-number overlay.
 
 ---
 
