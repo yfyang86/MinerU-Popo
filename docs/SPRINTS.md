@@ -16,7 +16,7 @@
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | **6** | `popo-tree` (tree assembly) + cross-page table merge + `build-tree` CLI | Ph 5 | ✅ done* |
 | **7** | `popo-eval` (native TEDS) + `eval` CLI + `popo-enrich` (subnode split) | Ph 6 | ✅ done* |
-| 8 | data-engine parity + codepath unification | Ph 7 | planned |
+| **8** | `popo-data-engine` training cases (reuses `popo-infer`) — unification | Ph 7 | 🚧 in progress |
 | 9 | hardening, throughput SLO, cutover, **delete Python** | Ph 8 | planned |
 
 ---
@@ -295,6 +295,31 @@ provider still awaits the PDF stage.
 `* Carryover:` **metadata generation** (`generate_metadata.py`: per-node
 summaries from the model over rendered PDF crops) lands with the PDF stage —
 it needs both the model client (have it) and PDF-crop rendering (pending).
+
+---
+
+## Sprint 8 — Data engine 🚧
+
+**Goal:** Port the training-data generator (`data_engine/add_link.py`) and
+**unify** it with the inference subtask code.
+
+### Delivered (this iteration)
+
+- **`popo-data-engine`** crate — training-case generators (`contd_case`,
+  `title_case`, `image_case`, `table_merge_case`) that emit the benchmark
+  `{image, conversations:[human, gpt], type}` items, plus `extract_json`
+  (the `llm_generate_json` parser: fenced ```json → outer `[...]` → whole).
+- **Unification realized:** the human prompt reuses `popo-infer`'s
+  `build_*_prompt` and the gpt response reuses its `contd_output` /
+  `title_output` — **one subtask implementation, two backends**, instead of the
+  Python repo's parallel `inference.py` vs `add_link.py`.
+- 4 tests; 108 workspace tests total; clippy (1.96) / fmt clean.
+
+### Remaining for Sprint 8
+
+- The `add_linkings_*` GPT-driven generation flow (judge-block building incl.
+  table `col_count`/`caption`/rows, the GPT JSON round-trip, per-doc
+  concurrency) — needs the GPT JSON prompts and PDF page images.
 
 ---
 

@@ -1,0 +1,12 @@
+[package]
+name = "popo-data-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Training-data generation: subtask training cases (reuses popo-infer prompt builders)."
+
+[dependencies]
+popo-infer = { workspace = true }
+serde_json = { workspace = true }

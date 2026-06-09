@@ -972,6 +972,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "popo-data-engine"
+version = "0.0.1"
+dependencies = [
+ "popo-infer",
+ "serde_json",
+]
+
+[[package]]
 name = "popo-enrich"
 version = "0.0.1"
 dependencies = [

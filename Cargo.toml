@@ -10,6 +10,7 @@ members = [
     "crates/popo-tree",
     "crates/popo-eval",
     "crates/popo-enrich",
+    "crates/popo-data-engine",
     "crates/popo-cli",
 ]
 
@@ -31,6 +32,7 @@ popo-table = { path = "crates/popo-table" }
 popo-tree = { path = "crates/popo-tree" }
 popo-eval = { path = "crates/popo-eval" }
 popo-enrich = { path = "crates/popo-enrich" }
+popo-data-engine = { path = "crates/popo-data-engine" }
 
 # Async / runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
