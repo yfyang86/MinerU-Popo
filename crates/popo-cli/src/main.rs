@@ -20,6 +20,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use popo_model::{ChatRequest, ClientOptions, LlmConfig, ModelClient, ReplayBackend};
 
+mod infer;
 mod normalize;
 
 /// MinerU-Popo Rust engine.
@@ -48,6 +49,8 @@ enum Command {
     Model(ModelCmd),
     /// Normalize OCR/layout outputs into the canonical block schema.
     Normalize(normalize::NormalizeArgs),
+    /// Run the four post-processing subtasks over normalized documents.
+    Infer(infer::InferArgs),
 }
 
 #[derive(Subcommand)]
@@ -146,6 +149,7 @@ async fn run(cli: &Cli) -> Result<()> {
             }
         }
         Command::Normalize(args) => normalize::run(args)?,
+        Command::Infer(args) => infer::run(&cli.config, args).await?,
     }
     Ok(())
 }

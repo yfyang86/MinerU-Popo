@@ -16,6 +16,7 @@ popo-core = { workspace = true }
 popo-obs = { workspace = true }
 popo-model = { workspace = true }
 popo-readers = { workspace = true }
+popo-infer = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }

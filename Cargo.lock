@@ -950,6 +950,7 @@ dependencies = [
  "anyhow",
  "clap",
  "popo-core",
+ "popo-infer",
  "popo-model",
  "popo-obs",
  "popo-readers",

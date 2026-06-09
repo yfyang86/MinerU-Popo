@@ -22,6 +22,27 @@ use popo_model::{ChatMessage, ChatRequest, ModelClient, Role};
 pub use block::{build_doc_blocks, WorkBlock};
 pub use chunk::{adaptive_chunk, Paged, Range};
 
+/// Run all four subtasks over a document's blocks in the Python `main` order
+/// (text-truncation, title-hierarchy, image-text, table-merge), mutating the
+/// blocks in place.
+pub async fn run_inference(
+    client: &ModelClient,
+    blocks: &mut [WorkBlock],
+    images: &dyn PageImageProvider,
+) -> Result<()> {
+    run_text_truncation(client, blocks, images).await?;
+    run_title_hierarchy(client, blocks, images).await?;
+    run_image_association(client, blocks, images).await?;
+    run_table_merge(client, blocks).await?;
+    Ok(())
+}
+
+/// Serialize blocks to the `doc_blocks` JSON array the tree builder consumes
+/// (Python `json.dump(doc_blocks, ...)`).
+pub fn doc_blocks_to_json(blocks: &[WorkBlock]) -> serde_json::Value {
+    serde_json::Value::Array(blocks.iter().map(WorkBlock::to_output_value).collect())
+}
+
 /// Supplies a rendered, base64-encoded image for a set of pages.
 pub trait PageImageProvider {
     /// Return `(media_type, base64_data)` for `pages`, or `None` to send a
@@ -384,5 +405,36 @@ mod tests {
         assert_eq!(blocks[0].table_merge, Some(2)); // partner id
         assert_eq!(blocks[1].table_merge, Some(1));
         assert!(blocks[0].cell_list.is_some());
+    }
+
+    /// `run_inference` orchestration + the output writer on a document that
+    /// triggers no model calls (single page, text only → all chunkers drop it,
+    /// no tables). The empty replay backend is never invoked.
+    #[tokio::test]
+    async fn run_inference_no_model_calls_writes_defaults() {
+        let pages = json!({
+            "1": [
+                { "type": "text", "content": "this is a long unfinished clause", "bbox": [0.1, 0.1, 0.9, 0.2] },
+                { "type": "text", "content": "that completes the thought nicely", "bbox": [0.1, 0.3, 0.9, 0.4] }
+            ]
+        });
+        let mut blocks = build_doc_blocks(pages.as_object().unwrap());
+        let backend = ReplayBackend::new("popo-test", vec![]);
+        let client =
+            ModelClient::from_backend("replay", Arc::new(backend), ClientOptions::default());
+
+        run_inference(&client, &mut blocks, &NoImages)
+            .await
+            .unwrap();
+
+        let out = doc_blocks_to_json(&blocks);
+        let arr = out.as_array().unwrap();
+        assert_eq!(arr.len(), 2);
+        assert_eq!(arr[0]["id"], 1);
+        assert_eq!(arr[0]["contd"], -1);
+        assert_eq!(arr[0]["level"], -1);
+        assert_eq!(arr[0]["image"], -1);
+        // Non-table blocks carry no table_merge field.
+        assert!(arr[0].get("table_merge").is_none());
     }
 }

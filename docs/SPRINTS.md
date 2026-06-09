@@ -12,7 +12,7 @@
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
 | **3** | `popo-readers` (5 OCR adapters) + `normalize` CLI | Ph 3 | ✅ done |
 | **4** | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | ✅ done |
-| **5** | **image-text** + **table-merge** subtasks (+ `popo-table`) done; `infer` CLI pending | Ph 4–5 | 🚧 subtasks done |
+| **5** | image-text + table-merge subtasks (+ `popo-table`) + **`infer` CLI** | Ph 4–5 | ✅ done* |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
 | 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
@@ -214,10 +214,20 @@ subtasks, sharing the model client.
 
 **All four inference subtasks are now ported.**
 
-### Remaining for Sprint 5
+### Added (infer CLI iteration)
 
-- The `infer` CLI subcommand (chaining the four subtasks + output writer) and
-  the PDF-backed page-image provider.
+- **`run_inference`** orchestrator (runs the four subtasks in Python `main`
+  order) and **`doc_blocks_to_json`** output writer.
+- **`popo infer`** CLI subcommand — reads normalized `{input_label, pages}`
+  docs, runs inference through the model client (`POPO_MODEL_REPLAY`-aware),
+  and writes the `doc_blocks` array the tree builder consumes. `normalize →
+  infer` now runs end-to-end from the CLI.
+- 84 workspace tests: a no-model-call orchestration test and a **CLI infer
+  integration test** (offline, via the literal-key `local_vllm` provider).
+
+`* Carryover:` the **PDF-backed page-image provider** (rendering pages to feed
+the VLM the `<image>` inputs) is deferred to a dedicated PDF stage, landing with
+Sprint 6's table/tree work. Until then `infer` runs text-only via `NoImages`.
 
 ---
 
