@@ -1,0 +1,12 @@
+[package]
+name = "popo-enrich"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Tree enrichment: subnode splitting (and, later, metadata generation)."
+
+[dependencies]
+serde_json = { workspace = true }
+regex = { workspace = true }

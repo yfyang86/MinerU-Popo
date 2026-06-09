@@ -950,6 +950,7 @@ dependencies = [
  "anyhow",
  "clap",
  "popo-core",
+ "popo-enrich",
  "popo-eval",
  "popo-infer",
  "popo-model",
@@ -968,6 +969,14 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "popo-enrich"
+version = "0.0.1"
+dependencies = [
+ "regex",
+ "serde_json",
 ]
 
 [[package]]

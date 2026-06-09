@@ -15,7 +15,7 @@
 | **5** | image-text + table-merge subtasks (+ `popo-table`) + **`infer` CLI** | Ph 4–5 | ✅ done* |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | **6** | `popo-tree` (tree assembly) + cross-page table merge + `build-tree` CLI | Ph 5 | ✅ done* |
-| **7** | `popo-eval` (native TEDS) + **`eval` CLI** done; `popo-enrich` pending | Ph 6 | 🚧 enrich pending |
+| **7** | `popo-eval` (native TEDS) + `eval` CLI + `popo-enrich` (subnode split) | Ph 6 | ✅ done* |
 | 8 | data-engine parity + codepath unification | Ph 7 | planned |
 | 9 | hardening, throughput SLO, cutover, **delete Python** | Ph 8 | planned |
 
@@ -284,10 +284,17 @@ provider still awaits the PDF stage.
   `summary.json` / `details.json`. A perfect-match document scores TEDS 1.0
   end-to-end. CLI integration test included. 101 workspace tests.
 
-### Remaining for Sprint 7
+### Added (enrich iteration)
 
-- **`popo-enrich`** — metadata generation (model + PDF crops) and subnode
-  splitting (`split_subnode.py`, offline).
+- **`popo-enrich`** crate — subnode splitting (`split_subnode.py`): visual nodes
+  move children into `subnode`; long text nodes split into ~500-char `sub_text`
+  chunks with the segment/index → location/block_ids bookkeeping. Operates on
+  the tree JSON; 3 tests.
+- **`popo split-subnode`** CLI command. 104 workspace tests total.
+
+`* Carryover:` **metadata generation** (`generate_metadata.py`: per-node
+summaries from the model over rendered PDF crops) lands with the PDF stage —
+it needs both the model client (have it) and PDF-crop rendering (pending).
 
 ---
 
