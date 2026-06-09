@@ -1,0 +1,12 @@
+[package]
+name = "popo-obs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Observability wiring (tracing/metrics) for the MinerU-Popo engine."
+
+[dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

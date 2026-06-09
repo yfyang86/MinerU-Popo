@@ -1,0 +1,12 @@
+[package]
+name = "popo-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared types and errors for the MinerU-Popo Rust engine."
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }

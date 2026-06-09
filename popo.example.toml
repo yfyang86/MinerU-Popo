@@ -1,0 +1,48 @@
+# MinerU-Popo model configuration (example).
+#
+# Copy to `popo.toml` and fill in real keys, or point the CLI at this file with
+# `--config` / `POPO_CONFIG`. API keys may be given literally, or as `env:VAR`
+# / `${VAR}` to read them from the environment instead of committing secrets.
+
+[default]
+provider = "deepseek"
+
+# --- LLM Provider Definitions ---
+# Each provider has: type (openai | claude), api_base, api_key, model.
+# "openai" type works for any OpenAI-compatible API (DeepSeek, Minimax, vLLM, …).
+
+[providers.openai]
+type = "openai"
+api_base = "https://api.openai.com/v1"
+api_key = "env:OPENAI_API_KEY"
+model = "gpt-4o"
+
+[providers.claude]
+type = "claude"
+api_base = "https://api.anthropic.com"
+api_key = "env:ANTHROPIC_API_KEY"
+model = "claude-sonnet-4-20250514"
+
+[providers.deepseek]
+type = "openai"
+api_base = "https://api.deepseek.com"
+api_key = "env:DEEPSEEK_API_KEY"
+model = "deepseek-v4-flash"
+
+[providers.kimi]
+type = "openai"
+api_base = "https://api.moonshot.cn/v1"
+api_key = "env:MOONSHOT_API_KEY"
+model = "moonshot-v1-8k"
+
+[providers.minimax]
+type = "openai"
+api_base = "https://api.minimax.chat/v1"
+api_key = "env:MINIMAX_API_KEY"
+model = "abab6.5s-chat"
+
+[providers.local_vllm]
+type = "openai"
+api_base = "http://localhost:8000/v1"
+api_key = "dummy"
+model = "Qwen/Qwen2.5-72B-Instruct"
