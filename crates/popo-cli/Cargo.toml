@@ -1,0 +1,21 @@
+[package]
+name = "popo-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command-line interface for the MinerU-Popo Rust engine."
+
+[[bin]]
+name = "popo"
+path = "src/main.rs"
+
+[dependencies]
+popo-core = { workspace = true }
+popo-obs = { workspace = true }
+popo-model = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }

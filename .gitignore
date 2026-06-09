@@ -1,3 +1,11 @@
 __pycache__/
 *.egg-info/
 *.egg
+
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock.orig
+
+# Local config (may contain secrets)
+/popo.toml
