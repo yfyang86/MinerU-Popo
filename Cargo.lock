@@ -688,6 +688,7 @@ dependencies = [
  "popo-core",
  "popo-model",
  "popo-obs",
+ "popo-readers",
  "serde_json",
  "tokio",
  "tracing",
@@ -698,6 +699,7 @@ name = "popo-core"
 version = "0.0.1"
 dependencies = [
  "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 
@@ -725,6 +727,16 @@ dependencies = [
  "metrics-exporter-prometheus",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "popo-readers"
+version = "0.0.1"
+dependencies = [
+ "popo-core",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -1059,6 +1071,7 @@ version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
+ "indexmap",
  "itoa",
  "memchr",
  "serde",

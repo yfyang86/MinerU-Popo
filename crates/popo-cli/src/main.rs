@@ -20,6 +20,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use popo_model::{ChatRequest, ClientOptions, LlmConfig, ModelClient, ReplayBackend};
 
+mod normalize;
+
 /// MinerU-Popo Rust engine.
 #[derive(Parser)]
 #[command(name = "popo", version, about)]
@@ -44,6 +46,8 @@ enum Command {
     /// Model/provider utilities.
     #[command(subcommand)]
     Model(ModelCmd),
+    /// Normalize OCR/layout outputs into the canonical block schema.
+    Normalize(normalize::NormalizeArgs),
 }
 
 #[derive(Subcommand)]
@@ -141,6 +145,7 @@ async fn run(cli: &Cli) -> Result<()> {
                 );
             }
         }
+        Command::Normalize(args) => normalize::run(args)?,
     }
     Ok(())
 }

@@ -6,6 +6,13 @@
 
 use thiserror::Error;
 
+pub mod schema;
+
+pub use schema::{
+    normalize_bbox_to_unit, normalize_text, reassign_block_ids, sort_blocks, to_popo_pages, Bbox,
+    NormalizedBlock, CANONICAL_TYPES,
+};
+
 /// The crate-wide result alias used across the workspace.
 pub type Result<T> = std::result::Result<T, Error>;
 

@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | **1** | Workspace bootstrap + **LLM config + model client** + tracing skeleton | Ph 1–2 | ✅ done |
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
-| 3 | `popo-readers` (label normalization, 5 OCR adapters) + `normalize` CLI | Ph 3 | planned |
+| **3** | `popo-readers` + `normalize` CLI — **MinerU family done**; Paddle/Dolphin/GLM pending | Ph 3 | 🚧 in progress |
 | 4 | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | planned |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
@@ -97,6 +97,39 @@ and make the model client observable.
 - The **golden corpus** itself needs real OCR inputs + recorded Python outputs,
   which aren't available in this environment; the record/replay machinery and
   parity-diff approach are in place to ingest it as soon as the data exists.
+
+---
+
+## Sprint 3 — Label normalization 🚧
+
+**Goal:** Port stage 1 (`label_normalization.py`) — adapt OCR/layout outputs to
+the canonical block schema behind a reader trait, with a `normalize` CLI.
+
+### Delivered (this iteration)
+
+- **`popo-core::schema`** — the canonical `NormalizedBlock`, `to_popo_block` /
+  `to_popo_pages` projections, and faithful ports of `normalize_text`,
+  `normalize_bbox_to_unit`, `sort_blocks`, `reassign_block_ids` (semantics and
+  rounding matched to Python for golden-corpus comparison). `serde_json`
+  `preserve_order` is enabled so page maps keep numeric order.
+- **`popo-readers`** — the `OcrReader` trait + `ReaderResult`, shared content
+  extraction (`content`/`text`/`html`/`words` → `lines[].spans[]` fallback),
+  and the **MinerU + MonkeyOCR** readers (`middle.json` and `content_list.json`
+  paths, `map_mineru_label`, title promotion via `text_level`, `discarded`
+  skipping).
+- **`popo normalize`** CLI — discovers `<input>/<doc>/…`, writes
+  `<output>/<model>/<doc>.json` as `{input_label, pages}` (mirrors
+  `run_label_normalization.sh`).
+
+### Verified
+
+- 6 schema tests + 6 reader tests + an **end-to-end CLI smoke** producing the
+  exact `{input_label, pages}` inference input. `clippy`/`fmt` clean.
+
+### Remaining for Sprint 3
+
+- Readers for **PaddleOCR-VL, Dolphin, GLM-OCR**; MinerU `model.json` path;
+  PDF page-size sourcing for readers that need it.
 
 ---
 

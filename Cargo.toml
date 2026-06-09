@@ -4,6 +4,7 @@ members = [
     "crates/popo-core",
     "crates/popo-obs",
     "crates/popo-model",
+    "crates/popo-readers",
     "crates/popo-cli",
 ]
 
@@ -19,6 +20,7 @@ repository = "https://github.com/yfyang86/MinerU-Popo"
 popo-core = { path = "crates/popo-core" }
 popo-obs = { path = "crates/popo-obs" }
 popo-model = { path = "crates/popo-model" }
+popo-readers = { path = "crates/popo-readers" }
 
 # Async / runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
@@ -27,7 +29,7 @@ async-trait = "0.1"
 # HTTP / serialization
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
 toml = "0.8"
 
 # Errors / logging
