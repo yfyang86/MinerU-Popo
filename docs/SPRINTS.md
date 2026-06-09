@@ -11,7 +11,8 @@
 | **1** | Workspace bootstrap + **LLM config + model client** + tracing skeleton | Ph 1–2 | ✅ done |
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
 | **3** | `popo-readers` (5 OCR adapters) + `normalize` CLI | Ph 3 | ✅ done |
-| **4** | `popo-infer`: chunking + **text-truncation** + **title-hierarchy (+sync)** done | Ph 4 | 🚧 subtasks 1–2 |
+| **4** | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | ✅ done |
+| **5** | **image-text association** done; table-merge + `infer` CLI pending | Ph 4–5 | 🚧 in progress |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
 | 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
@@ -182,10 +183,26 @@ subtasks, sharing the model client.
   the text-truncation runner. Replay-backed end-to-end test applies levels.
 - 18 infer tests; 61 workspace tests total.
 
-### Remaining for Sprint 4 / 5
+### Added (third iteration)
 
-- Image-text association and table-merge subtasks; the `infer` CLI; and the
-  page-image provider backed by the PDF stage.
+- **`popo-infer::image`** — the **image-text association** subtask:
+  `filter_image` / `check_overlap` (type normalization, `seal`→`image`, and the
+  containment `large_block_linking`), the `Image-Text Correlation Analysis`
+  prompt, and `apply_image` (pairs then containment links, in Python order).
+- **`run_image_association`** — async runner sharing `chat_for_chunk`;
+  `chunk_pages` is now generic over `Paged`. Replay-backed end-to-end test
+  applies a caption→image link. 23 infer tests; 66 workspace tests total.
+
+---
+
+## Sprint 5 — Remaining subtasks 🚧
+
+### Remaining
+
+- **Table-merge** subtask: the 6-check heuristic pre-filter plus the HTML
+  table-structure utilities (colspan/rowspan, header detection, first/last data
+  rows) and cell-coordinate parsing — its own iteration.
+- The `infer` CLI subcommand and the PDF-backed page-image provider.
 
 ---
 

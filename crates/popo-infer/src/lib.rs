@@ -11,6 +11,7 @@
 
 pub mod block;
 pub mod chunk;
+pub mod image;
 pub mod text;
 pub mod title;
 
@@ -38,10 +39,10 @@ impl PageImageProvider for NoImages {
 
 /// The distinct pages present in a chunk, restricted to the chunk's range and
 /// sorted (Python `pages = sorted([... if rng[0] <= page <= rng[1]])`).
-fn chunk_pages(chunk: &[text::JudgeBlock], rng: &Range) -> Vec<i64> {
+fn chunk_pages<T: Paged>(chunk: &[T], rng: &Range) -> Vec<i64> {
     let mut pages: Vec<i64> = chunk
         .iter()
-        .map(|b| b.page)
+        .map(Paged::page)
         .filter(|&p| rng[0] <= p && p <= rng[1])
         .collect();
     pages.sort_unstable();
@@ -125,6 +126,36 @@ pub async fn run_title_hierarchy(
     let output = title::title_output(&results);
     title::apply_title(blocks, &output);
     Ok(output)
+}
+
+/// Run the image-text association subtask over `blocks`, setting their `image`
+/// links in place and returning the serialized `image_output`.
+///
+/// Visual blocks contained in a large `image_block` are linked directly; the
+/// rest are chunked and sent to the model, whose `(src, tgt)` pairs are applied
+/// before the containment links (matching the Python order).
+pub async fn run_image_association(
+    client: &ModelClient,
+    blocks: &mut [WorkBlock],
+    images: &dyn PageImageProvider,
+) -> Result<String> {
+    let (judges, linking) = image::filter_image(blocks);
+    let (ranges, chunks) = adaptive_chunk(&judges, 50, 1);
+
+    let mut pairs: Vec<(i64, i64)> = Vec::new();
+    for (rng, chunk) in ranges.iter().zip(chunks.iter()) {
+        let pages = chunk_pages(chunk, rng);
+        let prompt = image::build_image_prompt(chunk);
+        let response = chat_for_chunk(client, prompt, &pages, images).await?;
+        for pair in text::parse_src_tgt(&response) {
+            if !pairs.contains(&pair) {
+                pairs.push(pair);
+            }
+        }
+    }
+
+    image::apply_image(blocks, &pairs, &linking);
+    Ok(text::contd_output(&pairs))
 }
 
 #[cfg(test)]
@@ -236,5 +267,51 @@ mod tests {
         assert_eq!(output, "<|id|>0<|level|>1\n<|id|>1<|level|>2");
         assert_eq!(blocks[0].level, 1);
         assert_eq!(blocks[1].level, 2);
+    }
+
+    /// A whole-document run of the image-text association subtask against a
+    /// replay backend, asserting the caption→image link is applied.
+    #[tokio::test]
+    async fn image_association_end_to_end_via_replay() {
+        // An image on page 1 and its caption on page 5 → one chunk.
+        let pages = json!({
+            "1": [ { "type": "image", "content": "", "bbox": [0.1, 0.1, 0.9, 0.5] } ],
+            "5": [ { "type": "image_caption", "content": "Figure 1", "bbox": [0.1, 0.55, 0.9, 0.6] } ]
+        });
+        let mut blocks = build_doc_blocks(pages.as_object().unwrap());
+
+        let (judges, _linking) = image::filter_image(&blocks);
+        let (_ranges, chunks) = adaptive_chunk(&judges, 50, 1);
+        assert_eq!(chunks.len(), 1);
+        let prompt = image::build_image_prompt(&chunks[0]);
+
+        let model = "popo-test";
+        let req = ChatRequest {
+            messages: vec![ChatMessage::text(Role::User, prompt)],
+            max_tokens: None,
+            temperature: None,
+        };
+        let fp = popo_model::fingerprint(model, &req);
+        let fixture = Fixture {
+            fingerprint: fp,
+            model: model.into(),
+            request: vec![],
+            max_tokens: None,
+            temperature: None,
+            response: RecordedResponse {
+                // caption (idx 1) links to image (idx 0)
+                text: "<|src_id|>1<|tgt_id|>0".into(),
+                usage: None,
+            },
+        };
+        let backend = ReplayBackend::new(model, vec![fixture]);
+        let client =
+            ModelClient::from_backend("replay", Arc::new(backend), ClientOptions::default());
+
+        run_image_association(&client, &mut blocks, &NoImages)
+            .await
+            .unwrap();
+        assert_eq!(blocks[1].image, 1); // caption → image block id 1
+        assert_eq!(blocks[0].image, -1);
     }
 }
