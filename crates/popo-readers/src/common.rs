@@ -65,6 +65,71 @@ pub fn read_bbox(v: Option<&Value>) -> Vec<f64> {
         .unwrap_or_default()
 }
 
+/// Stable-sort JSON objects by an optional integer key: items that have the key
+/// come first in ascending value; items missing it keep their original order
+/// after (Python `optional_int_sort_key`).
+pub fn sort_by_optional_int(items: &mut [Value], key: &str) {
+    items.sort_by_key(|item| match item.get(key).and_then(Value::as_i64) {
+        Some(v) => (0u8, v),
+        None => (1u8, 0),
+    });
+}
+
+/// Iterate "model.json"-style page containers into `(page_index, items)` pairs,
+/// porting Python `iter_model_pages`. Values are cloned for simple lifetimes.
+pub fn iter_model_pages(data: &Value) -> Vec<(i64, Vec<Value>)> {
+    let mut out = Vec::new();
+    match data {
+        Value::Array(pages) => {
+            for (idx0, page) in pages.iter().enumerate() {
+                let index = idx0 as i64 + 1;
+                match page {
+                    Value::Array(items) => {
+                        let dicts = items.iter().filter(|v| v.is_object()).cloned().collect();
+                        out.push((index, dicts));
+                    }
+                    Value::Object(obj) => {
+                        let items = obj
+                            .get("blocks")
+                            .or_else(|| obj.get("items"))
+                            .or_else(|| obj.get("elements"))
+                            .and_then(Value::as_array);
+                        match items {
+                            Some(arr) => {
+                                let page_index = if let Some(p) =
+                                    obj.get("page").and_then(Value::as_i64)
+                                {
+                                    p
+                                } else if let Some(p) = obj.get("page_idx").and_then(Value::as_i64)
+                                {
+                                    p + 1
+                                } else {
+                                    index
+                                };
+                                let dicts = arr.iter().filter(|v| v.is_object()).cloned().collect();
+                                out.push((page_index, dicts));
+                            }
+                            None => out.push((index, vec![page.clone()])),
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Value::Object(obj) => {
+            if let Some(pages) = obj
+                .get("pages")
+                .or_else(|| obj.get("pdf_info"))
+                .filter(|v| v.is_array())
+            {
+                out = iter_model_pages(pages);
+            }
+        }
+        _ => {}
+    }
+    out
+}
+
 /// Construct a [`NormalizedBlock`], collapsing unknown canonical types to
 /// `text` and normalizing content (mirrors Python `BaseReader.make_block`).
 /// The `bbox` is taken as-is (callers normalize to unit beforehand).

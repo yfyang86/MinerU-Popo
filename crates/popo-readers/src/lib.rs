@@ -11,9 +11,15 @@
 use popo_core::{reassign_block_ids, NormalizedBlock, Result};
 
 pub mod common;
+pub mod dolphin;
+pub mod glm;
 pub mod mineru;
+pub mod paddle;
 
+pub use dolphin::DolphinReader;
+pub use glm::GlmOcrReader;
 pub use mineru::{MineruReader, MonkeyOcrReader};
+pub use paddle::PaddleReader;
 
 /// The outcome of reading one document.
 #[derive(Debug, Clone)]
@@ -73,8 +79,11 @@ pub fn build_reader(
     match model_name {
         "mineru" => Ok(Box::new(MineruReader::new(root))),
         "monkeyocr" => Ok(Box::new(MonkeyOcrReader::new(root))),
+        "PaddleOCR-VL-1.5" | "paddle" => Ok(Box::new(PaddleReader::new(root))),
+        "dolphin" => Ok(Box::new(DolphinReader::new(root))),
+        "glm-ocr" => Ok(Box::new(GlmOcrReader::new(root))),
         other => Err(popo_core::Error::Config(format!(
-            "unsupported model {other:?} (supported so far: mineru, monkeyocr)"
+            "unsupported model {other:?} (supported: mineru, monkeyocr, PaddleOCR-VL-1.5, dolphin, glm-ocr)"
         ))),
     }
 }

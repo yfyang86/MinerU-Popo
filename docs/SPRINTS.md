@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | **1** | Workspace bootstrap + **LLM config + model client** + tracing skeleton | Ph 1–2 | ✅ done |
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
-| **3** | `popo-readers` + `normalize` CLI — **MinerU family done**; Paddle/Dolphin/GLM pending | Ph 3 | 🚧 in progress |
+| **3** | `popo-readers` (5 OCR adapters) + `normalize` CLI | Ph 3 | ✅ done |
 | 4 | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | planned |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
@@ -126,10 +126,21 @@ the canonical block schema behind a reader trait, with a `normalize` CLI.
 - 6 schema tests + 6 reader tests + an **end-to-end CLI smoke** producing the
   exact `{input_label, pages}` inference input. `clippy`/`fmt` clean.
 
-### Remaining for Sprint 3
+### Added (second iteration)
 
-- Readers for **PaddleOCR-VL, Dolphin, GLM-OCR**; MinerU `model.json` path;
-  PDF page-size sourcing for readers that need it.
+- **PaddleOCR-VL** reader (`layout_parsing.json` path + `map_paddle_label`).
+- **Dolphin** reader (`recognition_json` + `map_dolphin_label`, including the
+  `sec_<n>` heading-level convention).
+- **GLM-OCR** reader (`model.json` and `words_result` page paths +
+  `map_glm_label`), plus shared `iter_model_pages` / optional-int ordering.
+- `build_reader` now resolves all five models; 13 reader tests + Dolphin CLI
+  smoke green (43 workspace tests total).
+
+### Deferred to the PDF stage
+
+- Source-PDF page-size sourcing: Paddle per-page `*_res.json`, and exact pixel
+  sizing for Dolphin/GLM when payloads omit dimensions (bbox falls back today).
+  MinerU `model.json` path also lands with that work.
 
 ---
 
