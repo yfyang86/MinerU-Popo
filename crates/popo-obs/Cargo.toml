@@ -10,3 +10,5 @@ description = "Observability wiring (tracing/metrics) for the MinerU-Popo engine
 [dependencies]
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }

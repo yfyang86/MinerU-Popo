@@ -9,7 +9,7 @@
 | Sprint | Theme | Roadmap phase | Status |
 | --- | --- | --- | --- |
 | **1** | Workspace bootstrap + **LLM config + model client** + tracing skeleton | Ph 1–2 | ✅ done |
-| 2 | Golden corpus + parity harness + record/replay backend + Prometheus metrics | Ph 0–1 | planned |
+| **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
 | 3 | `popo-readers` (label normalization, 5 OCR adapters) + `normalize` CLI | Ph 3 | planned |
 | 4 | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | planned |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
@@ -59,6 +59,44 @@ config, behind one trait, ready for every later subtask to consume.
   (deterministic parity tests) and, optionally, a native in-process runtime.
 - `ClientOptions` (concurrency, attempts, backoff, timeout) will become
   config-driven and wired to metrics.
+
+---
+
+## Sprint 2 — Determinism & metrics ✅
+
+**Goal:** Make model interactions reproducible (the basis for parity testing)
+and make the model client observable.
+
+### Delivered
+
+- **Record/replay backends** (`popo-model::backend::replay`):
+  - `RecordingBackend` wraps any backend and writes each exchange to a fixture
+    directory, keyed by a platform-stable **FNV-1a fingerprint** of
+    `(model, messages, max_tokens, temperature)` — images reduced to a hash so
+    fixtures stay small.
+  - `ReplayBackend` serves responses hermetically from a fixture directory (no
+    network), the foundation for golden-corpus parity tests.
+  - `ModelClient::from_config_recording` / `from_backend` reuse the shared
+    concurrency/retry/metrics layer around either backend.
+- **Prometheus metrics** (`popo-obs::metrics`): install a recorder via the
+  `metrics` facade; `ModelClient::chat` emits `popo_model_requests_total`,
+  `_request_errors_total`, `_retries_total`, `_tokens_total{direction}`, and
+  the `popo_model_request_duration_seconds` histogram, all labeled by provider.
+- **CLI**: global `--metrics` flag (prints exposition on exit);
+  `POPO_MODEL_REPLAY=<dir>` to replay; `model chat --record <dir>` to capture.
+
+### Verification
+
+- 24 tests green: fingerprint stability/distinguishing, record→replay roundtrip
+  via disk, replay-miss error, **CLI replay integration test** (runs the built
+  binary against an authored fixture), and a **metrics-instrumentation test**
+  (local Prometheus recorder asserts counters render). `clippy`/`fmt` clean.
+
+### Deferred to Sprint 3 prelude
+
+- The **golden corpus** itself needs real OCR inputs + recorded Python outputs,
+  which aren't available in this environment; the record/replay machinery and
+  parity-diff approach are in place to ingest it as soon as the data exists.
 
 ---
 

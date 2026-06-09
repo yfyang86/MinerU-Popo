@@ -1,9 +1,11 @@
 //! Observability spine for the MinerU-Popo engine.
 //!
-//! Sprint 1 ships the tracing skeleton: a single [`init`] entry point that
-//! installs a `tracing` subscriber honoring the `POPO_LOG` / `RUST_LOG`
-//! environment filter. Prometheus metrics and profiling hooks join this crate
-//! in Sprint 2.
+//! [`init`] installs a `tracing` subscriber honoring the `POPO_LOG` /
+//! `RUST_LOG` environment filter; the [`metrics`] module installs a Prometheus
+//! recorder for the [`metrics`](metrics) facade that library crates emit
+//! through.
+
+pub mod metrics;
 
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 

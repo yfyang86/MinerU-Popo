@@ -23,6 +23,9 @@ pub mod client;
 pub mod config;
 pub mod message;
 
+pub use backend::replay::{
+    fingerprint, Fixture, RecordedResponse, RecordedUsage, RecordingBackend, ReplayBackend,
+};
 pub use backend::ModelBackend;
 pub use client::{ClientOptions, ModelClient};
 pub use config::{LlmConfig, ProviderConfig, ProviderType};

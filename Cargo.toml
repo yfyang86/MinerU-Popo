@@ -36,6 +36,10 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
+# Metrics
+metrics = "0.24"
+metrics-exporter-prometheus = { version = "0.16", default-features = false }
+
 # CLI / utils
 clap = { version = "4", features = ["derive", "env"] }
 base64 = "0.22"

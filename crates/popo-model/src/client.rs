@@ -7,6 +7,7 @@ use std::time::Duration;
 use popo_core::{Error, Result};
 use tokio::sync::Semaphore;
 
+use crate::backend::replay::RecordingBackend;
 use crate::backend::{claude::ClaudeBackend, openai::OpenAiBackend, ModelBackend};
 use crate::config::{LlmConfig, ProviderConfig, ProviderType};
 use crate::message::{ChatRequest, ChatResponse};
@@ -74,6 +75,40 @@ impl ModelClient {
         })
     }
 
+    /// Build a live client whose responses are also recorded as fixtures in
+    /// `record_dir`, for later hermetic replay.
+    pub fn from_config_recording(
+        config: &LlmConfig,
+        provider: Option<&str>,
+        record_dir: impl Into<std::path::PathBuf>,
+        options: ClientOptions,
+    ) -> Result<Self> {
+        let (name, pc) = config.resolve(provider)?;
+        let http = reqwest::Client::builder()
+            .timeout(options.request_timeout)
+            .build()
+            .map_err(|e| Error::Transport(format!("building HTTP client: {e}")))?;
+        let live = build_backend(http, pc)?;
+        let recording = RecordingBackend::new(live, record_dir)?;
+        Ok(Self::from_backend(name, Arc::new(recording), options))
+    }
+
+    /// Build a client around an already-constructed backend (e.g. a
+    /// [`ReplayBackend`](crate::backend::replay::ReplayBackend) in tests),
+    /// reusing the shared concurrency/retry/metrics layer.
+    pub fn from_backend(
+        provider_name: impl Into<String>,
+        backend: Arc<dyn ModelBackend>,
+        options: ClientOptions,
+    ) -> Self {
+        Self {
+            backend,
+            semaphore: Arc::new(Semaphore::new(options.max_concurrency)),
+            provider_name: provider_name.into(),
+            options,
+        }
+    }
+
     /// The provider name this client is bound to.
     pub fn provider_name(&self) -> &str {
         &self.provider_name
@@ -86,22 +121,34 @@ impl ModelClient {
 
     /// Run a chat request, honoring the concurrency permit and retrying
     /// transient failures with exponential backoff.
+    ///
+    /// Emits metrics through the [`metrics`] facade (no-ops without a recorder):
+    /// `popo_model_requests_total`, `popo_model_request_errors_total`,
+    /// `popo_model_retries_total`, `popo_model_tokens_total{direction}`, and
+    /// the `popo_model_request_duration_seconds` histogram — all labeled by
+    /// `provider`.
     pub async fn chat(&self, req: &ChatRequest) -> Result<ChatResponse> {
+        let provider = self.provider_name.clone();
         let _permit = self
             .semaphore
             .acquire()
             .await
             .map_err(|e| Error::Transport(format!("semaphore closed: {e}")))?;
 
+        metrics::counter!("popo_model_requests_total", "provider" => provider.clone()).increment(1);
+        let started = std::time::Instant::now();
+
         let mut attempt = 0;
-        loop {
+        let result = loop {
             attempt += 1;
             match self.backend.chat(req).await {
-                Ok(resp) => return Ok(resp),
+                Ok(resp) => break Ok(resp),
                 Err(e) if attempt < self.options.max_attempts && is_retryable(&e) => {
+                    metrics::counter!("popo_model_retries_total", "provider" => provider.clone())
+                        .increment(1);
                     let backoff = self.options.base_backoff * 2u32.pow(attempt - 1);
                     tracing::warn!(
-                        provider = %self.provider_name,
+                        provider = %provider,
                         attempt,
                         backoff_ms = backoff.as_millis() as u64,
                         error = %e,
@@ -109,9 +156,28 @@ impl ModelClient {
                     );
                     tokio::time::sleep(backoff).await;
                 }
-                Err(e) => return Err(e),
+                Err(e) => break Err(e),
+            }
+        };
+
+        metrics::histogram!("popo_model_request_duration_seconds", "provider" => provider.clone())
+            .record(started.elapsed().as_secs_f64());
+
+        match &result {
+            Ok(resp) => {
+                if let Some(u) = &resp.usage {
+                    metrics::counter!("popo_model_tokens_total", "provider" => provider.clone(), "direction" => "input")
+                        .increment(u.input_tokens as u64);
+                    metrics::counter!("popo_model_tokens_total", "provider" => provider.clone(), "direction" => "output")
+                        .increment(u.output_tokens as u64);
+                }
+            }
+            Err(_) => {
+                metrics::counter!("popo_model_request_errors_total", "provider" => provider)
+                    .increment(1);
             }
         }
+        result
     }
 }
 
@@ -156,6 +222,69 @@ mod tests {
             body: String::new()
         }));
         assert!(!is_retryable(&Error::ModelResponse("bad json".into())));
+    }
+
+    #[test]
+    fn chat_emits_request_and_token_metrics() {
+        use crate::backend::replay::{Fixture, RecordedResponse, RecordedUsage};
+        use crate::message::ChatRequest;
+
+        let model = "metrics-model";
+        let req = ChatRequest::user_prompt("hi");
+        let fp = crate::backend::replay::fingerprint(model, &req);
+        let backend = crate::backend::replay::ReplayBackend::new(
+            model,
+            vec![Fixture {
+                fingerprint: fp,
+                model: model.to_string(),
+                request: vec![],
+                max_tokens: None,
+                temperature: None,
+                response: RecordedResponse {
+                    text: "ok".into(),
+                    usage: Some(RecordedUsage {
+                        input_tokens: 5,
+                        output_tokens: 7,
+                    }),
+                },
+            }],
+        );
+        let client =
+            ModelClient::from_backend("replay", Arc::new(backend), ClientOptions::default());
+
+        let recorder = metrics_exporter_prometheus::PrometheusBuilder::new().build_recorder();
+        let handle = recorder.handle();
+        // `with_local_recorder` only scopes the synchronous closure, so drive the
+        // future to completion inside it.
+        metrics::with_local_recorder(&recorder, || {
+            futures_block_on(client.chat(&req)).unwrap();
+        });
+
+        let text = handle.render();
+        assert!(text.contains("popo_model_requests_total"), "render: {text}");
+        assert!(text.contains("popo_model_tokens_total"), "render: {text}");
+        assert!(text.contains("direction=\"output\""), "render: {text}");
+    }
+
+    /// Minimal single-threaded block-on so the test needs no extra runtime deps;
+    /// the replay backend never yields to I/O.
+    fn futures_block_on<F: std::future::Future>(mut fut: F) -> F::Output {
+        use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
+        fn noop(_: *const ()) {}
+        fn clone(_: *const ()) -> RawWaker {
+            RawWaker::new(std::ptr::null(), &VTABLE)
+        }
+        static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, noop, noop, noop);
+        let waker = unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) };
+        let mut cx = Context::from_waker(&waker);
+        // Safety: the future is not moved after pinning.
+        let mut fut = unsafe { std::pin::Pin::new_unchecked(&mut fut) };
+        loop {
+            match fut.as_mut().poll(&mut cx) {
+                Poll::Ready(v) => return v,
+                Poll::Pending => std::hint::spin_loop(),
+            }
+        }
     }
 
     #[test]

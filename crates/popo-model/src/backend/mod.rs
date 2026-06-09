@@ -11,6 +11,7 @@ use crate::message::{ChatRequest, ChatResponse};
 
 pub mod claude;
 pub mod openai;
+pub mod replay;
 
 /// A chat-capable model endpoint.
 #[async_trait]
