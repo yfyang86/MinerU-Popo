@@ -15,7 +15,7 @@
 | **5** | image-text + table-merge subtasks (+ `popo-table`) + **`infer` CLI** | Ph 4–5 | ✅ done* |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | **6** | `popo-tree` (tree assembly) + cross-page table merge + `build-tree` CLI | Ph 5 | ✅ done* |
-| 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
+| **7** | `popo-eval` (native TEDS) done; `eval` CLI + `popo-enrich` pending | Ph 6 | 🚧 in progress |
 | 8 | data-engine parity + codepath unification | Ph 7 | planned |
 | 9 | hardening, throughput SLO, cutover, **delete Python** | Ph 8 | planned |
 
@@ -257,6 +257,30 @@ inference `doc_blocks`.
 (`merge_table_html` colspan reconciliation + `cell_list`-driven cell joining)
 is a refinement on top of the structural row-append; and the PDF page-image
 provider still awaits the PDF stage.
+
+---
+
+## Sprint 7 — Evaluation 🚧
+
+**Goal:** Port stage 5 (`evaluate.py`): the title-hierarchy TEDS metric.
+
+### Delivered (this iteration)
+
+- **`popo-eval`** crate — the algorithmic core, no `zss`/`difflib`:
+  - Native **Zhang-Shasha tree-edit-distance** (`teds`) with insert/delete=1,
+    rename=0/1, and `title_teds_score` (`1 − distance/max_nodes`).
+  - Faithful port of Python's **`SequenceMatcher.ratio`** (Ratcliff-Obershelp,
+    recursive longest-match) + `text_similarity` containment floor.
+  - Bbox IoU / overlap-smaller, `alignment_score`, greedy
+    `align_title_blocks_to_gt`, `build_prediction_nodes`.
+  - `parse_title_prompt` / `parse_title_labels` / `content_aware_nodes`.
+- 10 tests, including `ratio` checked against known Python values and TEDS
+  edit-distance unit cases. 100 workspace tests total; clippy/fmt clean.
+
+### Remaining for Sprint 7
+
+- The `eval` CLI (wire the reader + GT title JSON, emit summary/details), and
+  **`popo-enrich`** (metadata generation + subnode splitting).
 
 ---
 

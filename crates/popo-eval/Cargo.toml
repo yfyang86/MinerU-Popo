@@ -1,0 +1,12 @@
+[package]
+name = "popo-eval"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Title-hierarchy TEDS evaluation: native tree-edit-distance + GT alignment."
+
+[dependencies]
+popo-core = { workspace = true }
+regex = { workspace = true }

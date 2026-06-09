@@ -970,6 +970,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "popo-eval"
+version = "0.0.1"
+dependencies = [
+ "popo-core",
+ "regex",
+]
+
+[[package]]
 name = "popo-infer"
 version = "0.0.1"
 dependencies = [
