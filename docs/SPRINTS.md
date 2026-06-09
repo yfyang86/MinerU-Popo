@@ -14,7 +14,7 @@
 | **4** | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | ✅ done |
 | **5** | image-text + table-merge subtasks (+ `popo-table`) + **`infer` CLI** | Ph 4–5 | ✅ done* |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
-| 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
+| **6** | `popo-tree` (tree assembly) + cross-page table merge + `build-tree` CLI | Ph 5 | ✅ done* |
 | 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
 | 8 | data-engine parity + codepath unification | Ph 7 | planned |
 | 9 | hardening, throughput SLO, cutover, **delete Python** | Ph 8 | planned |
@@ -228,6 +228,35 @@ subtasks, sharing the model client.
 `* Carryover:` the **PDF-backed page-image provider** (rendering pages to feed
 the VLM the `<image>` inputs) is deferred to a dedicated PDF stage, landing with
 Sprint 6's table/tree work. Until then `infer` runs text-only via `NoImages`.
+
+---
+
+## Sprint 6 — Tree build ✅
+
+**Goal:** Port stage 3 (`get_json_tree.py`): assemble the document tree from the
+inference `doc_blocks`.
+
+### Delivered
+
+- **`popo-tree`** crate — `build_tree` (supplement remap → cross-page table
+  merge → text components by title → heading-level tree → visual/special element
+  attachment → page supplements) and `tree_to_txt` for the indented preview.
+- **Cross-page table merge** (`merge_cross_page_tables`): structural element
+  merge (`merged_locations`/`merged_block_ids`, image-link redirect, partner
+  removal) plus a header-aware HTML row-append (`popo_table::merge_html`).
+- **`popo build-tree`** CLI — reads inference outputs, writes tree JSON + text
+  preview. `normalize → infer → build-tree` now runs end-to-end in Rust.
+
+### Verified
+
+- 4 tree tests (title/text hierarchy, image+caption attachment, cross-page
+  merge with partner drop, txt preview) + a **CLI integration test**. 90
+  workspace tests total; clippy (`-D warnings`) and fmt clean.
+
+`* Carryover (unchanged):` the Magic-PDF **semantic cell merge**
+(`merge_table_html` colspan reconciliation + `cell_list`-driven cell joining)
+is a refinement on top of the structural row-append; and the PDF page-image
+provider still awaits the PDF stage.
 
 ---
 

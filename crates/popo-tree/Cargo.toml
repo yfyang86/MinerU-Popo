@@ -1,0 +1,13 @@
+[package]
+name = "popo-tree"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Document tree assembly from inference doc_blocks (port of get_json_tree.py)."
+
+[dependencies]
+popo-table = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

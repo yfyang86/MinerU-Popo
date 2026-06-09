@@ -305,6 +305,46 @@ pub fn first_data_row_span_info(table: &Table, header_rows: usize) -> Vec<Vec<St
     result
 }
 
+/// Merge two cross-page table HTML fragments by appending the second table's
+/// data rows (after its shared header rows) into the first.
+///
+/// This is the **structural** merge: it preserves the first table's markup and
+/// concatenates the continuation rows. The Magic-PDF semantic cell merge
+/// (colspan reconciliation and `cell_list`-driven cell joining from
+/// `merge_table_html`) is a planned refinement.
+pub fn merge_html(previous: &str, current: &str) -> String {
+    let header = detect_table_headers(&parse_table(previous), &parse_table(current));
+    let (Some((prefix, prev_rows, suffix)), Some((_, cur_rows, _))) =
+        (split_rows(previous), split_rows(current))
+    else {
+        return previous.to_string();
+    };
+    let mut rows = prev_rows;
+    rows.extend(cur_rows.into_iter().skip(header));
+    format!("{prefix}{}{suffix}", rows.concat())
+}
+
+/// Split a table fragment into `(prefix, <tr>…</tr> blocks, suffix)` by scanning
+/// for the first `<tr` and last `</tr>`. Returns `None` if no rows are present.
+fn split_rows(html: &str) -> Option<(String, Vec<String>, String)> {
+    let lower = html.to_lowercase();
+    let first = lower.find("<tr")?;
+    let last_close = lower.rfind("</tr>")? + "</tr>".len();
+    let prefix = html[..first].to_string();
+    let suffix = html[last_close..].to_string();
+    let mid = &html[first..last_close];
+    let lower_mid = mid.to_lowercase();
+
+    let mut rows = Vec::new();
+    let mut start = 0;
+    while let Some(p) = lower_mid[start..].find("</tr>") {
+        let end = start + p + "</tr>".len();
+        rows.push(mid[start..end].to_string());
+        start = end;
+    }
+    Some((prefix, rows, suffix))
+}
+
 /// Extract the last balanced bracketed list from a model response and parse it
 /// as a Python literal (`extract_last_coordinates`). Returns `None` if absent
 /// or unparseable.
@@ -499,5 +539,17 @@ mod tests {
     fn empty_list_parses() {
         let v = extract_last_coordinates("result: []").unwrap();
         assert_eq!(v, serde_json::json!([]));
+    }
+
+    #[test]
+    fn merge_html_appends_data_rows_after_shared_header() {
+        let a = "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>";
+        let b = "<table><tr><th>A</th><th>B</th></tr><tr><td>3</td><td>4</td></tr></table>";
+        let merged = merge_html(a, b);
+        // Header appears once; both data rows present.
+        assert_eq!(merged.matches("<th>A</th>").count(), 1);
+        assert!(merged.contains("<td>1</td>"));
+        assert!(merged.contains("<td>3</td>"));
+        assert!(merged.ends_with("</table>"));
     }
 }

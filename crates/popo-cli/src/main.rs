@@ -20,6 +20,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use popo_model::{ChatRequest, ClientOptions, LlmConfig, ModelClient, ReplayBackend};
 
+mod build_tree;
 mod infer;
 mod normalize;
 
@@ -51,6 +52,8 @@ enum Command {
     Normalize(normalize::NormalizeArgs),
     /// Run the four post-processing subtasks over normalized documents.
     Infer(infer::InferArgs),
+    /// Assemble document trees from inference outputs.
+    BuildTree(build_tree::BuildTreeArgs),
 }
 
 #[derive(Subcommand)]
@@ -150,6 +153,7 @@ async fn run(cli: &Cli) -> Result<()> {
         }
         Command::Normalize(args) => normalize::run(args)?,
         Command::Infer(args) => infer::run(&cli.config, args).await?,
+        Command::BuildTree(args) => build_tree::run(args)?,
     }
     Ok(())
 }

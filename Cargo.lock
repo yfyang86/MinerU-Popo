@@ -954,6 +954,7 @@ dependencies = [
  "popo-model",
  "popo-obs",
  "popo-readers",
+ "popo-tree",
  "serde_json",
  "tokio",
  "tracing",
@@ -1025,6 +1026,15 @@ dependencies = [
  "scraper",
  "serde_json",
  "unicode-normalization",
+]
+
+[[package]]
+name = "popo-tree"
+version = "0.0.1"
+dependencies = [
+ "popo-table",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
