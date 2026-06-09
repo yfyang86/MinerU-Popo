@@ -102,13 +102,12 @@ fn build_text_subnodes(
     let mut current_chunk = String::new();
     let mut current_segments: Vec<usize> = Vec::new();
     let mut current_length = 0usize;
-    let mut segment_index = 1usize;
 
-    for segment in segments {
+    // `segment_index` is 1-based (Python starts at 1).
+    for (segment_index, segment) in (1usize..).zip(segments) {
         current_chunk.push_str(segment);
         current_length += segment.chars().count();
         current_segments.push(segment_index);
-        segment_index += 1;
         if current_length > 500 {
             result_chunks.push(std::mem::take(&mut current_chunk));
             chunk_segments.push(std::mem::take(&mut current_segments));
