@@ -11,7 +11,7 @@
 | **1** | Workspace bootstrap + **LLM config + model client** + tracing skeleton | Ph 1–2 | ✅ done |
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
 | **3** | `popo-readers` (5 OCR adapters) + `normalize` CLI | Ph 3 | ✅ done |
-| 4 | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | planned |
+| **4** | `popo-infer`: chunking + **text-truncation** done; title-hierarchy (+sync) pending | Ph 4 | 🚧 in progress |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
 | 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
@@ -141,6 +141,40 @@ the canonical block schema behind a reader trait, with a `normalize` CLI.
 - Source-PDF page-size sourcing: Paddle per-page `*_res.json`, and exact pixel
   sizing for Dolphin/GLM when payloads omit dimensions (bbox falls back today).
   MinerU `model.json` path also lands with that work.
+
+---
+
+## Sprint 4 — Inference core 🚧
+
+**Goal:** Port stage 2 (`inference.py`) — dynamic chunking and the four
+subtasks, sharing the model client.
+
+### Delivered (this iteration)
+
+- **`popo-infer::block`** — the mutable `WorkBlock` and `build_doc_blocks`
+  (1-based ids in page/document order; `to_output_value` round-trips to the
+  `doc_blocks` shape the tree builder reads).
+- **`popo-infer::chunk`** — `adaptive_chunk`, a faithful port of the
+  boundary-aware, overlap-preserving page chunker (including the
+  `last - start > 2` trailing-chunk guard that drops very short spans).
+- **`popo-infer::text`** — the **text-truncation** subtask: `merge_rules`,
+  sentence helpers, `is_list_item` (regex), `filter_contd`, the
+  `Truncation Detection` prompt, `extract_label1` parsing, and `apply_contd`.
+- **`run_text_truncation`** — async runner tying it together through
+  `ModelClient`, with page images abstracted by `PageImageProvider`
+  (`NoImages` today; real rendering arrives with the PDF stage).
+
+### Verified
+
+- 13 infer tests (heuristics, chunking boundary behavior, prompt/parse/apply)
+  including a **replay-backed end-to-end** run that applies a `contd` link.
+  56 workspace tests total; `clippy`/`fmt` clean.
+
+### Remaining for Sprint 4
+
+- Title-hierarchy subtask + cross-chunk **bias synchronization**; then the
+  image-text and table-merge subtasks (Sprint 5), plus the `infer` CLI and the
+  page-image provider backed by the PDF stage.
 
 ---
 

@@ -1,0 +1,19 @@
+[package]
+name = "popo-infer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Inference stage: dynamic chunking and the four post-processing subtasks."
+
+[dependencies]
+popo-core = { workspace = true }
+popo-model = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
