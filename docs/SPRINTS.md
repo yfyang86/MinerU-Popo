@@ -11,7 +11,7 @@
 | **1** | Workspace bootstrap + **LLM config + model client** + tracing skeleton | Ph 1–2 | ✅ done |
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
 | **3** | `popo-readers` (5 OCR adapters) + `normalize` CLI | Ph 3 | ✅ done |
-| **4** | `popo-infer`: chunking + **text-truncation** done; title-hierarchy (+sync) pending | Ph 4 | 🚧 in progress |
+| **4** | `popo-infer`: chunking + **text-truncation** + **title-hierarchy (+sync)** done | Ph 4 | 🚧 subtasks 1–2 |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
 | 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
@@ -170,10 +170,21 @@ subtasks, sharing the model client.
   including a **replay-backed end-to-end** run that applies a `contd` link.
   56 workspace tests total; `clippy`/`fmt` clean.
 
-### Remaining for Sprint 4
+### Added (second iteration)
 
-- Title-hierarchy subtask + cross-chunk **bias synchronization**; then the
-  image-text and table-merge subtasks (Sprint 5), plus the `infer` CLI and the
+- **`popo-infer::title`** — the **title-hierarchy** subtask: `filter_title`, the
+  `Title Level Analysis` prompt, `extract_label2`, and the cross-chunk **bias
+  synchronization** (`synchronize`) that pins overlapping headings and subtracts
+  the averaged offset from a chunk's new levels (banker's rounding, matching
+  Python `round`).
+- **`run_title_hierarchy`** — async runner processing chunks **sequentially** so
+  the synchronization sees them in order; shares a `chat_for_chunk` helper with
+  the text-truncation runner. Replay-backed end-to-end test applies levels.
+- 18 infer tests; 61 workspace tests total.
+
+### Remaining for Sprint 4 / 5
+
+- Image-text association and table-merge subtasks; the `infer` CLI; and the
   page-image provider backed by the PDF stage.
 
 ---
