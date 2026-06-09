@@ -21,6 +21,7 @@ use clap::{Parser, Subcommand};
 use popo_model::{ChatRequest, ClientOptions, LlmConfig, ModelClient, ReplayBackend};
 
 mod build_tree;
+mod eval;
 mod infer;
 mod normalize;
 
@@ -54,6 +55,8 @@ enum Command {
     Infer(infer::InferArgs),
     /// Assemble document trees from inference outputs.
     BuildTree(build_tree::BuildTreeArgs),
+    /// Evaluate title-hierarchy TEDS against ground truth.
+    Eval(eval::EvalArgs),
 }
 
 #[derive(Subcommand)]
@@ -154,6 +157,7 @@ async fn run(cli: &Cli) -> Result<()> {
         Command::Normalize(args) => normalize::run(args)?,
         Command::Infer(args) => infer::run(&cli.config, args).await?,
         Command::BuildTree(args) => build_tree::run(args)?,
+        Command::Eval(args) => eval::run(args)?,
     }
     Ok(())
 }

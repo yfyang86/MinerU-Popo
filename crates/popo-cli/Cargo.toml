@@ -18,6 +18,7 @@ popo-model = { workspace = true }
 popo-readers = { workspace = true }
 popo-infer = { workspace = true }
 popo-tree = { workspace = true }
+popo-eval = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }

@@ -15,7 +15,7 @@
 | **5** | image-text + table-merge subtasks (+ `popo-table`) + **`infer` CLI** | Ph 4–5 | ✅ done* |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | **6** | `popo-tree` (tree assembly) + cross-page table merge + `build-tree` CLI | Ph 5 | ✅ done* |
-| **7** | `popo-eval` (native TEDS) done; `eval` CLI + `popo-enrich` pending | Ph 6 | 🚧 in progress |
+| **7** | `popo-eval` (native TEDS) + **`eval` CLI** done; `popo-enrich` pending | Ph 6 | 🚧 enrich pending |
 | 8 | data-engine parity + codepath unification | Ph 7 | planned |
 | 9 | hardening, throughput SLO, cutover, **delete Python** | Ph 8 | planned |
 
@@ -277,10 +277,17 @@ provider still awaits the PDF stage.
 - 10 tests, including `ratio` checked against known Python values and TEDS
   edit-distance unit cases. 100 workspace tests total; clippy/fmt clean.
 
+### Added (eval CLI iteration)
+
+- **`popo eval`** CLI — reads the GT title JSON, runs the reader per document,
+  aligns predicted titles, scores `content_aware` TEDS, and writes
+  `summary.json` / `details.json`. A perfect-match document scores TEDS 1.0
+  end-to-end. CLI integration test included. 101 workspace tests.
+
 ### Remaining for Sprint 7
 
-- The `eval` CLI (wire the reader + GT title JSON, emit summary/details), and
-  **`popo-enrich`** (metadata generation + subnode splitting).
+- **`popo-enrich`** — metadata generation (model + PDF crops) and subnode
+  splitting (`split_subnode.py`, offline).
 
 ---
 
