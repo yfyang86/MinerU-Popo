@@ -27,8 +27,11 @@ pub struct WorkBlock {
     pub level: i64,
     /// Image-text association: 1-based id of the linked block, or `-1`.
     pub image: i64,
-    /// Cross-page table-merge partner id, or `None` if not a table / unmerged.
+    /// Cross-page table-merge state: `None` for non-tables, `Some(-1)` for an
+    /// unmerged table, `Some(partner_id)` once merged.
     pub table_merge: Option<i64>,
+    /// Cell-merge coordinate list from the table-merge subtask, when merged.
+    pub cell_list: Option<Value>,
     /// Original block fields, retained for output round-tripping.
     pub source: Map<String, Value>,
 }
@@ -45,6 +48,9 @@ impl WorkBlock {
         m.insert("image".into(), Value::from(self.image));
         if let Some(tm) = self.table_merge {
             m.insert("table_merge".into(), Value::from(tm));
+        }
+        if let Some(cl) = &self.cell_list {
+            m.insert("cell_list".into(), cl.clone());
         }
         Value::Object(m)
     }
@@ -89,6 +95,8 @@ pub fn build_doc_blocks(pages: &Map<String, Value>) -> Vec<WorkBlock> {
                 .unwrap_or("")
                 .to_string();
             let bbox = read_bbox(obj.get("bbox"));
+            // Tables carry a `table_merge` field (default -1), matching Python.
+            let table_merge = if kind == "table" { Some(-1) } else { None };
             blocks.push(WorkBlock {
                 id,
                 page,
@@ -98,7 +106,8 @@ pub fn build_doc_blocks(pages: &Map<String, Value>) -> Vec<WorkBlock> {
                 contd: -1,
                 level: -1,
                 image: -1,
-                table_merge: None,
+                table_merge,
+                cell_list: None,
                 source: obj.clone(),
             });
             id += 1;

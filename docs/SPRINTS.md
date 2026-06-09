@@ -12,7 +12,7 @@
 | **2** | **Record/replay backend + Prometheus metrics** (golden corpus deferred) | Ph 0–1 | ✅ done |
 | **3** | `popo-readers` (5 OCR adapters) + `normalize` CLI | Ph 3 | ✅ done |
 | **4** | `popo-infer`: chunking + text-truncation + title-hierarchy (+sync) | Ph 4 | ✅ done |
-| **5** | **image-text association** done; table-merge + `infer` CLI pending | Ph 4–5 | 🚧 in progress |
+| **5** | **image-text** + **table-merge** subtasks (+ `popo-table`) done; `infer` CLI pending | Ph 4–5 | 🚧 subtasks done |
 | 5 | image-text association + table-merge subtasks | Ph 4 | planned |
 | 6 | `popo-tree` + cross-page table merge | Ph 5 | planned |
 | 7 | `popo-enrich` + `popo-eval` (native TEDS) | Ph 6 | planned |
@@ -197,12 +197,27 @@ subtasks, sharing the model client.
 
 ## Sprint 5 — Remaining subtasks 🚧
 
-### Remaining
+### Added (table-merge iteration)
 
-- **Table-merge** subtask: the 6-check heuristic pre-filter plus the HTML
-  table-structure utilities (colspan/rowspan, header detection, first/last data
-  rows) and cell-coordinate parsing — its own iteration.
-- The `infer` CLI subcommand and the PDF-backed page-image provider.
+- **`popo-table`** crate — HTML table-structure utilities (port of
+  `data_engine/table_utils.py`): flat row/cell parsing via `scraper`,
+  colspan/rowspan occupancy, total/effective/visual/colspan column counts,
+  `detect_table_headers`, last-row / first-data-row span info, and
+  `extract_last_coordinates` (with a small Python-literal parser). 8 tests.
+- **`popo-infer::table`** — the **table-merge** subtask: the 6-check heuristic
+  screen (`filter_table_merge_candidates`: text-between, caption-consistency,
+  continuation-marker, footnote-count, width-difference, column-count),
+  `filter_table_merge`, the `add_table_merge` prompt, and `apply_merge`.
+  `WorkBlock` gained `cell_list` and table-default `table_merge`.
+- **`run_table_merge`** — text-only runner (no page image), one model call per
+  screened pair. Replay-backed end-to-end test links two tables. 82 tests total.
+
+**All four inference subtasks are now ported.**
+
+### Remaining for Sprint 5
+
+- The `infer` CLI subcommand (chaining the four subtasks + output writer) and
+  the PDF-backed page-image provider.
 
 ---
 

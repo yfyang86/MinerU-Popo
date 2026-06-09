@@ -5,6 +5,7 @@ members = [
     "crates/popo-obs",
     "crates/popo-model",
     "crates/popo-readers",
+    "crates/popo-table",
     "crates/popo-infer",
     "crates/popo-cli",
 ]
@@ -23,6 +24,7 @@ popo-obs = { path = "crates/popo-obs" }
 popo-model = { path = "crates/popo-model" }
 popo-readers = { path = "crates/popo-readers" }
 popo-infer = { path = "crates/popo-infer" }
+popo-table = { path = "crates/popo-table" }
 
 # Async / runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
@@ -48,3 +50,5 @@ metrics-exporter-prometheus = { version = "0.16", default-features = false }
 clap = { version = "4", features = ["derive", "env"] }
 base64 = "0.22"
 regex = "1"
+scraper = "0.20"
+unicode-normalization = "0.1"

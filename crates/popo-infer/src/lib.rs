@@ -12,6 +12,7 @@
 pub mod block;
 pub mod chunk;
 pub mod image;
+pub mod table;
 pub mod text;
 pub mod title;
 
@@ -156,6 +157,31 @@ pub async fn run_image_association(
 
     image::apply_image(blocks, &pairs, &linking);
     Ok(text::contd_output(&pairs))
+}
+
+/// Run the table-merge subtask: screen adjacent-page table pairs, ask the model
+/// (text-only) whether each merges, and link the tables when it returns a
+/// non-empty cell list. Returns the number of merges applied.
+pub async fn run_table_merge(client: &ModelClient, blocks: &mut [WorkBlock]) -> Result<usize> {
+    let inputs = table::filter_table_merge(blocks);
+    let mut merged = 0;
+    for mi in &inputs {
+        let prompt = table::build_table_merge_prompt(&mi.upper, &mi.lower);
+        let req = ChatRequest {
+            messages: vec![ChatMessage::text(Role::User, prompt)],
+            max_tokens: None,
+            temperature: None,
+        };
+        let response = client.chat(&req).await?.text;
+        if let Some(cell_list) = popo_table::extract_last_coordinates(&response) {
+            let before = blocks[mi.table1_idx].table_merge;
+            table::apply_merge(blocks, mi, &cell_list);
+            if blocks[mi.table1_idx].table_merge != before {
+                merged += 1;
+            }
+        }
+    }
+    Ok(merged)
 }
 
 #[cfg(test)]
@@ -313,5 +339,50 @@ mod tests {
             .unwrap();
         assert_eq!(blocks[1].image, 1); // caption → image block id 1
         assert_eq!(blocks[0].image, -1);
+    }
+
+    /// A whole-document run of the table-merge subtask against a replay backend,
+    /// asserting two compatible tables on consecutive pages are linked.
+    #[tokio::test]
+    async fn table_merge_end_to_end_via_replay() {
+        let tbl1 = "<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>";
+        let tbl2 = "<table><tr><th>A</th><th>B</th></tr><tr><td>3</td><td>4</td></tr></table>";
+        let pages = json!({
+            "1": [ { "type": "table", "content": tbl1, "bbox": [0.1, 0.1, 0.9, 0.6] } ],
+            "2": [ { "type": "table", "content": tbl2, "bbox": [0.1, 0.1, 0.9, 0.6] } ]
+        });
+        let mut blocks = build_doc_blocks(pages.as_object().unwrap());
+
+        let inputs = table::filter_table_merge(&blocks);
+        assert_eq!(inputs.len(), 1);
+        let prompt = table::build_table_merge_prompt(&inputs[0].upper, &inputs[0].lower);
+
+        let model = "popo-test";
+        let req = ChatRequest {
+            messages: vec![ChatMessage::text(Role::User, prompt)],
+            max_tokens: None,
+            temperature: None,
+        };
+        let fp = popo_model::fingerprint(model, &req);
+        let fixture = Fixture {
+            fingerprint: fp,
+            model: model.into(),
+            request: vec![],
+            max_tokens: None,
+            temperature: None,
+            response: RecordedResponse {
+                text: "Cells to merge: [[0, 1], [1, 0]]".into(),
+                usage: None,
+            },
+        };
+        let backend = ReplayBackend::new(model, vec![fixture]);
+        let client =
+            ModelClient::from_backend("replay", Arc::new(backend), ClientOptions::default());
+
+        let merged = run_table_merge(&client, &mut blocks).await.unwrap();
+        assert_eq!(merged, 1);
+        assert_eq!(blocks[0].table_merge, Some(2)); // partner id
+        assert_eq!(blocks[1].table_merge, Some(1));
+        assert!(blocks[0].cell_list.is_some());
     }
 }

@@ -176,6 +176,7 @@ mod tests {
             level: -1,
             image: -1,
             table_merge: None,
+            cell_list: None,
             source: Map::new(),
         }
     }

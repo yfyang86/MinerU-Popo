@@ -10,6 +10,7 @@ description = "Inference stage: dynamic chunking and the four post-processing su
 [dependencies]
 popo-core = { workspace = true }
 popo-model = { workspace = true }
+popo-table = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
